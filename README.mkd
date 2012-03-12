@@ -1,0 +1,13 @@
+Tornavro
+========
+
+Tornavro is a simple utility for serving Avro RPC using Tornado's IOLoop.
+
+**NOTE: This is mostly a toy right now and should be considered pre-alpha.**
+
+*Tornavro* is open source under the [MIT license](http://www.opensource.org/licenses/mit-license.php).
+
+Basic Usage
+-----------
+
+For now, check out the examples directory.

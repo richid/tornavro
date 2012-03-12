@@ -1,0 +1,7 @@
+*.py[co]
+*.sw[po]
+venv/
+dist/
+.Python
+requirements.txt
+tornavro.egg-info/

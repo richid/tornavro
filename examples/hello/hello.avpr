@@ -1,0 +1,15 @@
+{
+    "protocol": "Hello",
+    "namespace": "com.tornavo",
+    "doc": "Simple Hello World Protocol",
+    "messages": {
+        "hello": {
+            "doc": "Say hello.",
+            "request": [{
+                "type": "string",
+                "name": "name"
+            }],
+            "response": "string"
+        }
+    }
+}
