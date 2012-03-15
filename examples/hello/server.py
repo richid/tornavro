@@ -1,3 +1,5 @@
+import os
+
 import avro.protocol
 import tornado.web
 import tornado.ioloop

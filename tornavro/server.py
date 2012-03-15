@@ -1,7 +1,6 @@
 """Simple Avro server based on Tornado's TCPServer."""
 
 import socket
-import multiprocessing.pool
 
 import avro.ipc
 import tornado.ioloop
@@ -24,8 +23,6 @@ class AvroServer(tornado.netutil.TCPServer):
         preserved.
         """
 
-        # XXX: cheat(!) and use a pool of worker threads
-        self.pool = multiprocessing.pool.ThreadPool(10)
         self.responder = responder
 
         super(AvroServer, self).__init__(**kwargs)
@@ -34,7 +31,7 @@ class AvroServer(tornado.netutil.TCPServer):
         """Read the Avro framed messaged by each buffer."""
 
         # Should we limit stream.max_buffer_size? Default is 100MB
-        AvroConnection(stream, address, self.responder.respond, self.pool)
+        AvroConnection(stream, address, self.responder.respond)
 
 
 class AvroConnection(object):
@@ -43,13 +40,12 @@ class AvroConnection(object):
     class) on that message. Then write the response out on the wire.
     """
 
-    def __init__(self, stream, address, request_callback, worker_pool):
+    def __init__(self, stream, address, responder_callback):
         """Set us up the bomb."""
 
         self.stream = stream
         self.address = address
-        self.request_callback = request_callback
-        self.worker_pool = worker_pool
+        self.responder_callback = responder_callback
         self.message = StringIO()
         self.read_new_buffer()
 
@@ -99,13 +95,11 @@ class AvroConnection(object):
         self.read_new_buffer()
 
     def _on_response(self, response):
-        #tornado.ioloop.IOLoop.instance().add_handler(self.stream.fileno(), self.
-        #response = self.request_callback(request)
+        """Grab the response, frame it, and write it out."""
 
         writer = avro.ipc.FramedWriter(StringIO())
         writer.write_framed_message(response)
 
-        # Should this notify _someone_ when the write has been flushed?
         self.write(writer.writer.getvalue())
 
     def _fetch_response(self):
@@ -118,6 +112,4 @@ class AvroConnection(object):
         reader = avro.ipc.FramedReader(self.message)
         request = reader.read_framed_message()
 
-        # Delegate invocation of the Responder to the thread pool
-        self.worker_pool.apply_async(self.request_callback, args=(request,),
-            callback=self._on_response)
+        self.responder_callback(request, self._on_response)

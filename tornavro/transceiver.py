@@ -1,6 +1,5 @@
-"""Simple, blocking socket-based transceiver."""
+"""Simple, blocking, socket-based transceiver."""
 
-import struct
 import socket
 
 import avro.ipc
@@ -12,7 +11,7 @@ except ImportError:
 
 
 class SocketTransceiver(object):
-    """Blocking, Socket-based transceiver."""
+    """Simple, blocking, socket-based transceiver."""
 
     def __init__(self, host, port):
         """Create and connect to the remote service."""
@@ -44,8 +43,9 @@ class SocketTransceiver(object):
         buffer_length = ""
 
         while buffer_length != 0:
-            buffer_header = self.sock.recv(4)
-            buffer_length = struct.unpack('!I', buffer_header)[0]
+            buffer_header = self.sock.recv(avro.ipc.BUFFER_HEADER_LENGTH)
+            buffer_length = \
+                avro.ipc.BIG_ENDIAN_INT_STRUCT.unpack(buffer_header)[0]
             message.write(buffer_header)
 
             if buffer_length == "":

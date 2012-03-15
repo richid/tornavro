@@ -1,5 +1,6 @@
-"""Base responder class, subclasses just need to define the endpoints they
-expose.
+"""Base responder class; subclasses need to define the endpoints they expose.
+The initialize() method is provided as a way to setup any external resources
+the service requires.
 """
 
 import avro.ipc
@@ -7,7 +8,7 @@ import avro.schema
 
 
 class Responder(avro.ipc.Responder):
-    """Base responder class, subclasses just need to define the endpoints they
+    """Base responder class; subclasses need to define the endpoints they
     expose.
 
     For example:
@@ -26,6 +27,16 @@ class Responder(avro.ipc.Responder):
     def initialize(self):
         """Hook for subclasses to add any initialization logic."""
         pass
+
+    def respond(self, call_request, callback=None):
+        """This method is overriden to add the callback kwarg."""
+
+        response = super(Responder, self).respond(call_request)
+
+        if callback:
+            return callback(response)
+
+        return response
 
     def invoke(self, message, request):
         """Call the requested method in the subclassed responder."""
