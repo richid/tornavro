@@ -13,11 +13,10 @@ except ImportError:
 class SocketTransceiver(object):
     """Simple, blocking, socket-based transceiver."""
 
-    def __init__(self, host, port):
+    def __init__(self, host, port, timeout=None):
         """Create and connect to the remote service."""
 
-        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.sock.connect((host, port))
+        self.sock = socket.create_connection((host, port), timeout)
 
     remote_name = property(lambda self: self.sock.getsockname())
 
