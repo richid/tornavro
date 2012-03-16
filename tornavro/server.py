@@ -71,6 +71,9 @@ class AvroConnection(object):
         except socket.error:
             pass
 
+        # Read any additional requests from this stream
+        self.read_new_buffer()
+
     def _on_new_buffer(self, buffer_header):
         """Callback fired after we've read the buffer length off the wire and
         are ready to read the payload.
