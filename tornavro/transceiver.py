@@ -40,24 +40,30 @@ class SocketTransceiver(object):
         """Read the response from the wire and return it."""
 
         message = StringIO()
-        buffer_length = ""
 
-        while buffer_length != 0:
+        while True:
+            buff = StringIO()
             buffer_header = self.sock.recv(avro.ipc.BUFFER_HEADER_LENGTH)
             buffer_length = \
                 avro.ipc.BIG_ENDIAN_INT_STRUCT.unpack(buffer_header)[0]
-            message.write(buffer_header)
 
             if buffer_length == "":
-                raise avro.ipc.ConnectionClosedException("Reader read 0 bytes.")
+                raise avro.ipc.ConnectionClosedException(
+                    "Socket read 0 bytes."
+                )
+            elif buffer_length == 0:
+                # A 0-length buffer indicates the end of the message
+                return message.getvalue()
 
-            message.write(self.sock.recv(buffer_length))
+            while buff.tell() < buffer_length:
+                chunk = self.sock.recv(buffer_length - buff.tell())
+                if chunk == "":
+                    raise avro.ipc.ConnectionClosedException(
+                        "Socket read 0 bytes."
+                    )
+                buff.write(chunk)
 
-        message.reset()
-        reader = avro.ipc.FramedReader(message)
-        framed_message = reader.read_framed_message()
-
-        return framed_message
+            message.write(buff.getvalue())
 
     def close(self):
         """Close this socket for both reading and writing."""
