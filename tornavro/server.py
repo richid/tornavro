@@ -57,8 +57,7 @@ class AvroConnection(object):
         if self.stream.closed():
             return
 
-        callback = tornado.stack_context.wrap(self._on_new_buffer)
-        self.stream.read_bytes(avro.ipc.BUFFER_HEADER_LENGTH, callback)
+        self.stream.read_bytes(avro.ipc.BUFFER_HEADER_LENGTH, self._on_new_buffer)
 
     def write(self, chunk):
         """Writes a chunk of output to the stream."""
@@ -66,12 +65,13 @@ class AvroConnection(object):
         if self.stream.closed():
             return
 
-        try:
-            self.stream.write(chunk)
-        except socket.error:
-            pass
+        self.stream.write(chunk, self._on_write)
 
-        # Read any additional requests from this stream
+    def _on_write(self):
+        """Callback fired after previous write has been flushed. Ready to read
+        additional request from the sream.
+        """
+
         self.read_new_buffer()
 
     def _on_new_buffer(self, buffer_header):

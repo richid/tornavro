@@ -63,6 +63,6 @@ class Responder(avro.ipc.Responder):
         # for records
         try:
             return getattr(self, message.name)(**request)
-        except Exception, e:
+        except:
             self.handle_exception(message.name)
             return
