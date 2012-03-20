@@ -1,6 +1,6 @@
 """Simple Avro server based on Tornado's TCPServer."""
 
-import socket
+import multiprocessing.pool
 
 import avro.ipc
 import tornado.ioloop
@@ -13,8 +13,8 @@ except ImportError:
     from StringIO import StringIO
 
 
-class AvroServer(tornado.netutil.TCPServer):
-    """Simple Avro server based on Tornado's TCPServer."""
+class Server(tornado.netutil.TCPServer):
+    """Single-threaded Avro server based on Tornado's TCPServer."""
 
     def __init__(self, responder, **kwargs):
         """Create the server, taking a responder instance as an argument.
@@ -25,13 +25,44 @@ class AvroServer(tornado.netutil.TCPServer):
 
         self.responder = responder
 
-        super(AvroServer, self).__init__(**kwargs)
+        super(Server, self).__init__(**kwargs)
 
     def handle_stream(self, stream, address):
         """Read the Avro framed messaged by each buffer."""
 
         # Should we limit stream.max_buffer_size? Default is 100MB
-        AvroConnection(stream, address, self.responder.respond)
+        AvroConnection(stream, address, self.handle_request)
+
+    def handle_request(self, request, callback):
+        """Send the request off to the Responder instance to perform the
+        actual work.
+        """
+
+        self.responder.respond(request, callback)
+
+
+class ThreadPoolServer(Server):
+    """Server that utilizes a pool of worker threads to call the Responder
+    endpoints.
+    """
+
+    def __init__(self, responder, num_threads=15, **kwargs):
+        """Create the server, taking a responder instance as an argument and
+        num_threads as kwarg.
+
+        Optional kwargs (io_loop, ssl_options) from parent constructor are
+        preserved.
+        """
+
+        self.thread_pool = multiprocessing.pool.ThreadPool(num_threads)
+
+        super(ThreadPoolServer, self).__init__(responder, **kwargs)
+
+    def handle_request(self, request, callback):
+        """Use the thread pool to handle the request."""
+
+        func = self.responder.respond
+        self.thread_pool.apply_async(func, args=(request,), callback=callback)
 
 
 class AvroConnection(object):
@@ -40,12 +71,12 @@ class AvroConnection(object):
     class) on that message. Then write the response out on the wire.
     """
 
-    def __init__(self, stream, address, responder_callback):
+    def __init__(self, stream, address, request_handler):
         """Set us up the bomb."""
 
         self.stream = stream
         self.address = address
-        self.responder_callback = responder_callback
+        self.request_handler = request_handler
         self.message = StringIO()
         self.read_new_buffer()
 
@@ -57,7 +88,8 @@ class AvroConnection(object):
         if self.stream.closed():
             return
 
-        self.stream.read_bytes(avro.ipc.BUFFER_HEADER_LENGTH, self._on_new_buffer)
+        self.stream.read_bytes(avro.ipc.BUFFER_HEADER_LENGTH,
+            self._on_new_buffer)
 
     def write(self, chunk):
         """Writes a chunk of output to the stream."""
@@ -115,4 +147,4 @@ class AvroConnection(object):
         reader = avro.ipc.FramedReader(self.message)
         request = reader.read_framed_message()
 
-        self.responder_callback(request, self._on_response)
+        self.request_handler(request, self._on_response)

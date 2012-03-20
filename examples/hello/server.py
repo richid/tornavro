@@ -23,6 +23,6 @@ proto = open(os.path.join(os.path.dirname(__file__), 'hello.avpr')).read()
 proto = avro.protocol.parse(proto)
 responder = HelloResponder(proto)
 
-server = tornavro.server.AvroServer(responder)
+server = tornavro.server.Server(responder)
 server.listen(options.port)
 tornado.ioloop.IOLoop.instance().start()
