@@ -53,11 +53,6 @@ class Responder(avro.ipc.Responder):
     def invoke(self, message, request):
         """Call the requested method in the subclassed responder."""
 
-        if not hasattr(self, message.name):
-            raise avro.schema.AvroException(
-                "Method %s not defined in responder" % message.name
-            )
-
         # TODO: It would be awesome to somehow split the RPC params into the
         # method signature.  Could just use **request, but that doesn't work
         # for records
